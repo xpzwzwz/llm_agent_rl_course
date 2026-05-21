@@ -1,0 +1,5 @@
+{"task_id":"doc_001","prompt":"找到 GRPO 适合什么任务。","query":"GRPO","answer_contains":["GRPO","可验证","reward"]}
+{"task_id":"doc_002","prompt":"找出 DPO 需要什么数据格式。","query":"DPO","answer_contains":["prompt","chosen","rejected"]}
+{"task_id":"doc_003","prompt":"说明 reward hacking 的一个例子。","query":"reward hacking","answer_contains":["删除测试","reward","任务"]}
+{"task_id":"doc_004","prompt":"SFT 训练 agent 时为什么要保留 tool role？","query":"tool role","answer_contains":["tool","assistant","observation"]}
+{"task_id":"doc_005","prompt":"为什么 coding agent 需要 hidden tests？","query":"hidden tests","answer_contains":["hidden","测试","删除"]}
