@@ -43,6 +43,7 @@
 
 - [第十三课：端到端 Toy Project](lesson_13_end_to_end_toy_project.md)
 - [toy_project/README.md](toy_project/README.md)
+- [real_training_lab/README.md](real_training_lab/README.md)
 - [开源项目学习路线](open_source_study_guide.md)
 - [原理学习项目推荐](principle_learning_projects.md)
 
@@ -152,4 +153,3 @@ Agent 模型的核心能力是：
 4. 把好轨迹和坏轨迹配成 preference pair，再做 DPO。
 5. 对有自动验证器的任务，例如代码测试、网页任务完成、API 返回检查，再考虑 GRPO/PPO。
 6. 建立固定评估集，否则 reward 上升不等于 agent 真的变强。
-
