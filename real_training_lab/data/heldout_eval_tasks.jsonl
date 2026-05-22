@@ -1,0 +1,3 @@
+{"task_id": "heldout_001", "prompt": "GRPO 更适合哪类可以自动打分的任务？", "query": "GRPO", "answer_contains": ["GRPO", "可验证", "reward"]}
+{"task_id": "heldout_002", "prompt": "DPO 训练样本里通常要比较哪两个字段？", "query": "DPO", "answer_contains": ["prompt", "chosen", "rejected"]}
+{"task_id": "heldout_003", "prompt": "举一个 agent 训练中 reward hacking 的代码任务例子。", "query": "reward hacking", "answer_contains": ["删除测试", "reward", "任务"]}

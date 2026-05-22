@@ -11,6 +11,27 @@ DEFAULT_RAW = TOY_ROOT / "data" / "trajectories_raw.jsonl"
 DEFAULT_TASKS = TOY_ROOT / "data" / "tasks.jsonl"
 DEFAULT_OUT = ROOT / "data"
 
+HELDOUT_TASKS = [
+    {
+        "task_id": "heldout_001",
+        "prompt": "GRPO 更适合哪类可以自动打分的任务？",
+        "query": "GRPO",
+        "answer_contains": ["GRPO", "可验证", "reward"],
+    },
+    {
+        "task_id": "heldout_002",
+        "prompt": "DPO 训练样本里通常要比较哪两个字段？",
+        "query": "DPO",
+        "answer_contains": ["prompt", "chosen", "rejected"],
+    },
+    {
+        "task_id": "heldout_003",
+        "prompt": "举一个 agent 训练中 reward hacking 的代码任务例子。",
+        "query": "reward hacking",
+        "answer_contains": ["删除测试", "reward", "任务"],
+    },
+]
+
 
 def load_jsonl(path):
     with Path(path).open(encoding="utf-8") as fh:
@@ -114,19 +135,21 @@ def main():
 
     output_dir = Path(args.output_dir)
     trajectories = load_jsonl(args.raw_path)
-    tasks = load_jsonl(args.tasks_path)
+    train_tasks = load_jsonl(args.tasks_path)
+    eval_tasks = train_tasks + HELDOUT_TASKS
     sft = build_sft_records(trajectories)
     dpo = build_dpo_records(trajectories)
 
     write_jsonl(output_dir / "train_sft.jsonl", sft)
     write_jsonl(output_dir / "train_dpo.jsonl", dpo)
-    write_jsonl(output_dir / "eval_tasks.jsonl", tasks)
+    write_jsonl(output_dir / "eval_tasks.jsonl", eval_tasks)
+    write_jsonl(output_dir / "heldout_eval_tasks.jsonl", HELDOUT_TASKS)
 
     print(f"wrote {len(sft)} SFT samples to {output_dir / 'train_sft.jsonl'}")
     print(f"wrote {len(dpo)} DPO pairs to {output_dir / 'train_dpo.jsonl'}")
-    print(f"wrote {len(tasks)} eval tasks to {output_dir / 'eval_tasks.jsonl'}")
+    print(f"wrote {len(eval_tasks)} eval tasks to {output_dir / 'eval_tasks.jsonl'}")
+    print(f"wrote {len(HELDOUT_TASKS)} held-out eval tasks to {output_dir / 'heldout_eval_tasks.jsonl'}")
 
 
 if __name__ == "__main__":
     main()
-

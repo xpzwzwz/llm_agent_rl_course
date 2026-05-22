@@ -7,7 +7,7 @@ COURSE_ROOT = ROOT.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(COURSE_ROOT / "toy_project"))
 
-from eval_agent import extract_action, run_rule_based_agent
+from eval_agent import build_messages, extract_action, run_rule_based_agent
 from prepare_dataset import build_dpo_records, build_sft_records, load_jsonl, validate_sft_messages
 
 
@@ -52,3 +52,10 @@ def test_rule_based_eval_runner_completes_toy_task():
     assert result["parse_errors"] == 0
     assert result["invalid_actions"] == 0
     assert result["steps"] >= 2
+
+
+def test_build_messages_uses_chat_roles():
+    task = {"prompt": "找到 GRPO 适合什么任务。"}
+    messages = build_messages(task, [{"assistant": {"action": "search_text", "arguments": {"query": "GRPO"}}, "tool": []}])
+
+    assert [message["role"] for message in messages] == ["system", "user", "assistant", "tool"]

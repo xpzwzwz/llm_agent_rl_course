@@ -15,7 +15,7 @@
 python prepare_dataset.py
 python eval_agent.py --model rule
 python train_sft_lora.py --model_name Qwen/Qwen2.5-0.5B-Instruct
-python eval_agent.py --model outputs/sft_lora
+python eval_agent.py --model Qwen/Qwen2.5-0.5B-Instruct --base_model Qwen/Qwen2.5-0.5B-Instruct --adapter_path outputs/sft_lora
 ```
 
 ## 结果
@@ -40,4 +40,3 @@ python eval_agent.py --model outputs/sft_lora
 - 下一轮怎么改数据：
 - 是否需要补 DPO pair：
 - 是否需要改 eval：
-

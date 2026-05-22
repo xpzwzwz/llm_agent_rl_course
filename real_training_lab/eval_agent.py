@@ -79,37 +79,69 @@ def run_rule_based_agent(task, max_steps=4):
     }
 
 
-def build_prompt(task, history):
-    lines = [
+SYSTEM_PROMPT = "\n".join(
+    [
         "你是文档检索 agent。可用工具：",
         '- search_text: {"action":"search_text","arguments":{"query":"..."}}',
         '- read_file: {"action":"read_file","arguments":{"path":"..."}}',
         "每次只能输出一个 JSON action，完成时输出 Final: ...",
-        f"任务：{task['prompt']}",
     ]
+)
+
+
+def build_messages(task, history):
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": task["prompt"]},
+    ]
+    for item in history:
+        messages.append({"role": "assistant", "content": json.dumps(item["assistant"], ensure_ascii=False)})
+        messages.append({"role": "tool", "content": json.dumps(item["tool"], ensure_ascii=False)})
+    return messages
+
+
+def build_prompt(task, history):
+    lines = [SYSTEM_PROMPT, f"任务：{task['prompt']}"]
     for item in history:
         lines.append(f"Assistant: {json.dumps(item['assistant'], ensure_ascii=False)}")
         lines.append(f"Tool: {json.dumps(item['tool'], ensure_ascii=False)}")
     return "\n".join(lines)
 
 
-def load_model(model_name):
+def load_model(model_name, base_model=None, adapter_path=None):
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", trust_remote_code=True)
+    tokenizer_name = base_model or model_name
+    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(base_model or model_name, device_map="auto", trust_remote_code=True)
+    if adapter_path:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, adapter_path)
+    model.eval()
     return tokenizer, model
 
 
-def generate_text(tokenizer, model, prompt, max_new_tokens=128):
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+def format_generation_input(tokenizer, messages):
+    if getattr(tokenizer, "chat_template", None):
+        return tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt",
+        )
+    return tokenizer(build_prompt({"prompt": messages[1]["content"]}, []), return_tensors="pt")["input_ids"]
+
+
+def generate_text(tokenizer, model, messages, max_new_tokens=128):
+    input_ids = format_generation_input(tokenizer, messages).to(model.device)
     outputs = model.generate(
-        **inputs,
+        input_ids=input_ids,
         max_new_tokens=max_new_tokens,
         do_sample=False,
         pad_token_id=tokenizer.eos_token_id,
     )
-    return tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1] :], skip_special_tokens=True)
+    return tokenizer.decode(outputs[0][input_ids.shape[-1] :], skip_special_tokens=True)
 
 
 def run_model_agent(task, tokenizer, model, max_steps=4):
@@ -120,8 +152,8 @@ def run_model_agent(task, tokenizer, model, max_steps=4):
     final = ""
 
     for step_index in range(max_steps):
-        prompt = build_prompt(task, history)
-        text = generate_text(tokenizer, model, prompt)
+        messages = build_messages(task, history)
+        text = generate_text(tokenizer, model, messages)
         parsed = extract_action(text)
         if parsed.kind == "parse_error":
             parse_errors += 1
@@ -173,6 +205,8 @@ def summarize(results, model_name):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="rule", help="'rule' for smoke test, or HF model/checkpoint path")
+    parser.add_argument("--base_model", default=None, help="Base model for loading a LoRA adapter")
+    parser.add_argument("--adapter_path", default=None, help="Optional LoRA adapter path")
     parser.add_argument("--tasks_path", default=str(ROOT / "data" / "eval_tasks.jsonl"))
     parser.add_argument("--max_steps", type=int, default=4)
     parser.add_argument("--output_path", default=str(ROOT / "outputs" / "eval_results.json"))
@@ -183,10 +217,11 @@ def main():
     if args.model == "rule":
         results = [run_rule_based_agent(task, max_steps=args.max_steps) for task in tasks]
     else:
-        tokenizer, model = load_model(args.model)
+        tokenizer, model = load_model(args.model, base_model=args.base_model, adapter_path=args.adapter_path)
         results = [run_model_agent(task, tokenizer, model, max_steps=args.max_steps) for task in tasks]
 
-    summary = summarize(results, args.model)
+    model_label = args.adapter_path or args.model
+    summary = summarize(results, model_label)
     output_path = Path(args.output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps({"summary": summary, "results": results}, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -196,4 +231,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

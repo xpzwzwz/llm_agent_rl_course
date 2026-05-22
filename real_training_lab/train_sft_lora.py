@@ -1,8 +1,14 @@
 import argparse
 
+from config_utils import apply_config_defaults
+
 
 def main():
-    parser = argparse.ArgumentParser()
+    pre_parser = argparse.ArgumentParser(add_help=False)
+    pre_parser.add_argument("--config", default=None)
+    pre_args, remaining = pre_parser.parse_known_args()
+
+    parser = argparse.ArgumentParser(parents=[pre_parser])
     parser.add_argument("--model_name", default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--dataset_path", default="data/train_sft.jsonl")
     parser.add_argument("--output_dir", default="outputs/sft_lora")
@@ -14,7 +20,8 @@ def main():
     parser.add_argument("--lora_r", type=int, default=8)
     parser.add_argument("--lora_alpha", type=int, default=16)
     parser.add_argument("--lora_dropout", type=float, default=0.05)
-    args = parser.parse_args()
+    apply_config_defaults(parser, pre_args.config)
+    args = parser.parse_args(remaining)
 
     from datasets import load_dataset
     from peft import LoraConfig
@@ -57,4 +64,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
