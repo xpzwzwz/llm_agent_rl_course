@@ -27,14 +27,15 @@ After：
 {
   "messages": [
     {"role": "user", "content": "修复测试失败。"},
-    {"role": "assistant", "content": "{\"action\":\"run_tests\",\"arguments\":{\"command\":\"pytest -q\"}}"},
-    {"role": "tool", "content": "FAILED test_empty_input"},
-    {"role": "assistant", "content": "{\"action\":\"read_file\",\"arguments\":{\"path\":\"src/parser.py\"}}"},
-    {"role": "tool", "content": "def parse(text): return text.split(',')"},
-    {"role": "assistant", "content": "{\"action\":\"edit_file\",\"arguments\":{\"path\":\"src/parser.py\",\"patch\":\"if not text: return []\"}}"},
-    {"role": "assistant", "content": "{\"action\":\"run_tests\",\"arguments\":{\"command\":\"pytest -q\"}}"},
-    {"role": "tool", "content": "4 passed"},
-    {"role": "assistant", "content": "Final: 已修复并通过测试。"}
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "run_tests", "arguments": "{\"command\":\"pytest -q\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "content": "FAILED test_empty_input"},
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_2", "type": "function", "function": {"name": "read_file", "arguments": "{\"path\":\"src/parser.py\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_2", "content": "def parse(text): return text.split(',')"},
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_3", "type": "function", "function": {"name": "edit_file", "arguments": "{\"path\":\"src/parser.py\",\"patch\":\"if not text: return []\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_3", "content": "edited"},
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_4", "type": "function", "function": {"name": "run_tests", "arguments": "{\"command\":\"pytest -q\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_4", "content": "4 passed"},
+    {"role": "assistant", "content": "已修复并通过测试。"}
   ]
 }
 ```
@@ -61,8 +62,14 @@ After：
 ```json
 {
   "prompt": "找到 GRPO 适合什么任务。",
-  "chosen": "Action: search_text({\"query\":\"GRPO\"})\nResult: GRPO 适合可验证任务...\nFinal: GRPO 适合有 verifier 的任务，例如数学、代码、网页状态检查。",
-  "rejected": "Final: GRPO 是一种很强大的算法，应用广泛。"
+  "chosen": [
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "search_text", "arguments": "{\"query\":\"GRPO\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "content": "GRPO 适合可验证任务..."},
+    {"role": "assistant", "content": "GRPO 适合有 verifier 的任务，例如数学、代码、网页状态检查。"}
+  ],
+  "rejected": [
+    {"role": "assistant", "content": "GRPO 是一种很强大的算法，应用广泛。"}
+  ]
 }
 ```
 
@@ -110,4 +117,3 @@ After：
   "verifier": {"passed": true, "type": "dom_text", "expected": "已发货"}
 }
 ```
-

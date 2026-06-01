@@ -45,7 +45,20 @@ agent 每一步都应记录：
   "timestamp": "2026-05-21T10:12:00Z",
   "model": "qwen-agent-sft-v1",
   "observation": "pytest 输出...",
-  "assistant_output": "Action: read_file({\"path\":\"src/parser.py\"})",
+  "assistant_message": {
+    "role": "assistant",
+    "content": null,
+    "tool_calls": [
+      {
+        "id": "call_3",
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "arguments": "{\"path\":\"src/parser.py\"}"
+        }
+      }
+    ]
+  },
   "parsed_action": {
     "name": "read_file",
     "arguments": {"path": "src/parser.py"}
@@ -62,7 +75,7 @@ agent 每一步都应记录：
 
 重要原则：
 
-- `assistant_output` 原样保留，方便排查解析失败。
+- `assistant_message` 原样保留，方便排查解析失败。
 - `parsed_action` 结构化保存，方便统计工具使用。
 - `environment_hash` 保存环境版本，方便复现。
 - tool error 不要删，失败恢复样本很有价值。
@@ -170,9 +183,9 @@ replay tool calls in mock server -> compare expected JSON -> label
 {
   "messages": [
     {"role": "user", "content": "任务..."},
-    {"role": "assistant", "content": "Action: ..."},
-    {"role": "tool", "content": "Result: ..."},
-    {"role": "assistant", "content": "Final: ..."}
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{\"path\":\"src/parser.py\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "content": "Result: ..."},
+    {"role": "assistant", "content": "已完成。"}
   ]
 }
 ```
@@ -231,4 +244,3 @@ train_eval_split: by task_id
 ```
 
 split 必须按 task_id 分，而不是按 trajectory 分。否则同一任务的成功轨迹在 train，失败轨迹在 eval，会造成泄漏。
-

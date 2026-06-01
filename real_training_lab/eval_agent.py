@@ -25,11 +25,9 @@ class ParsedOutput:
 
 def extract_action(text):
     stripped = text.strip()
-    if stripped.startswith("Final:"):
-        return ParsedOutput(kind="final", final=stripped[len("Final:") :].strip())
     match = re.search(r"\{.*\}", stripped, re.DOTALL)
     if not match:
-        return ParsedOutput(kind="parse_error")
+        return ParsedOutput(kind="final", final=stripped)
     try:
         obj = json.loads(match.group(0))
     except json.JSONDecodeError:
@@ -82,9 +80,10 @@ def run_rule_based_agent(task, max_steps=4):
 SYSTEM_PROMPT = "\n".join(
     [
         "你是文档检索 agent。可用工具：",
-        '- search_text: {"action":"search_text","arguments":{"query":"..."}}',
-        '- read_file: {"action":"read_file","arguments":{"path":"..."}}',
-        "每次只能输出一个 JSON action，完成时输出 Final: ...",
+        '- search_text: {"query":"..."}',
+        '- read_file: {"path":"..."}',
+        "训练数据使用结构化 tool_calls 消息；本地评测 runner 兼容 JSON action 调试输出。",
+        "需要调用工具时只输出一个 JSON action；完成时直接输出自然语言回答。",
     ]
 )
 
@@ -95,8 +94,24 @@ def build_messages(task, history):
         {"role": "user", "content": task["prompt"]},
     ]
     for item in history:
-        messages.append({"role": "assistant", "content": json.dumps(item["assistant"], ensure_ascii=False)})
-        messages.append({"role": "tool", "content": json.dumps(item["tool"], ensure_ascii=False)})
+        tool_call_id = f"call_{len(messages)}"
+        messages.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": tool_call_id,
+                        "type": "function",
+                        "function": {
+                            "name": item["assistant"]["action"],
+                            "arguments": json.dumps(item["assistant"].get("arguments", {}), ensure_ascii=False),
+                        },
+                    }
+                ],
+            }
+        )
+        messages.append({"role": "tool", "tool_call_id": tool_call_id, "content": json.dumps(item["tool"], ensure_ascii=False)})
     return messages
 
 

@@ -25,9 +25,9 @@ pytest passed -> +1
 模型可能：
 
 ```text
-Action: edit_file({"path":"tests/test_parser.py","patch":"删除失败测试"})
-Action: run_tests(...)
-Result: passed
+assistant tool call: edit_file({"path":"tests/test_parser.py","patch":"删除失败测试"})
+assistant tool call: run_tests(...)
+tool result: passed
 ```
 
 解决：
@@ -42,9 +42,9 @@ Result: passed
 坏轨迹：
 
 ```text
-Assistant: Action: run_tests(...)
-Assistant: Observation: 10 passed
-Assistant: Final: 完成
+assistant tool call: run_tests(...)
+assistant content: Observation: 10 passed
+assistant content: 完成
 ```
 
 这里 observation 是模型自己写的。
@@ -180,4 +180,3 @@ GRPO/PPO：
 - 模型拒绝执行原本安全的任务。
 
 停训后先审计数据和 reward，再恢复训练。
-

@@ -18,34 +18,51 @@ prompt + trajectory_chosen > prompt + trajectory_rejected
 
 ## 2. 标准 DPO 格式
 
-简单格式：
+对 agent 来说，`chosen` / `rejected` 最好是消息列表，而不是一段拼接字符串：
 
 ```json
 {
   "prompt": "修复 parser 空输入 bug。",
-  "chosen": "Action: run_tests...\nAction: read_file...\nAction: edit_file...\nAction: run_tests...\nFinal: 通过测试。",
-  "rejected": "Final: 可能是 parser.py 的问题。"
-}
-```
-
-Conversational 格式：
-
-```json
-{
   "chosen": [
-    {"role": "user", "content": "修复 parser 空输入 bug。"},
-    {"role": "assistant", "content": "Action: run_tests..."},
-    {"role": "tool", "content": "FAILED"},
-    {"role": "assistant", "content": "Final: 通过测试。"}
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "run_tests",
+            "arguments": "{\"command\":\"pytest -q\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_1", "content": "FAILED test_empty_input"},
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\":\"src/parser.py\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_2", "content": "def parse(text): ..."},
+    {"role": "assistant", "content": "已修复并通过测试。"}
   ],
   "rejected": [
-    {"role": "user", "content": "修复 parser 空输入 bug。"},
-    {"role": "assistant", "content": "Final: 可能是 parser.py 的问题。"}
+    {"role": "assistant", "content": "可能是 parser.py 的问题，但我还没有验证。"}
   ]
 }
 ```
 
-格式要和训练框架一致。Alignment Handbook 风格的数据常用 `chosen` / `rejected` 列，内容是 role/content 消息列表。
+有些框架要求 `chosen` / `rejected` 包含完整 user 消息，有些框架把 `prompt` 单独作为列。选一种即可，但 tool call、tool result 和最终回答的边界不要丢。
 
 ## 3. Pair 构造流程
 
@@ -171,4 +188,3 @@ label_conflict_rate
 - chosen/rejected 长度差极大的 pair。
 - judge 和 verifier 冲突的 pair。
 - LLM judge 高分但 verifier 失败的 pair。
-

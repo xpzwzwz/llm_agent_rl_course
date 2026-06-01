@@ -28,7 +28,7 @@ def test_prepare_dataset_builds_sft_and_dpo_records():
 
 def test_extract_action_parses_json_and_final():
     action = extract_action('{"action":"search_text","arguments":{"query":"GRPO"}}')
-    final = extract_action("Final: 已完成。")
+    final = extract_action("已完成。")
 
     assert action.kind == "action"
     assert action.name == "search_text"
@@ -59,3 +59,6 @@ def test_build_messages_uses_chat_roles():
     messages = build_messages(task, [{"assistant": {"action": "search_text", "arguments": {"query": "GRPO"}}, "tool": []}])
 
     assert [message["role"] for message in messages] == ["system", "user", "assistant", "tool"]
+    assert messages[2]["content"] is None
+    assert messages[2]["tool_calls"][0]["function"]["name"] == "search_text"
+    assert messages[3]["tool_call_id"] == messages[2]["tool_calls"][0]["id"]

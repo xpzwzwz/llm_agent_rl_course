@@ -55,9 +55,14 @@ def validate_sft_messages(messages):
         errors.append("missing_assistant")
     if "tool" not in roles:
         errors.append("missing_tool")
-    if not any(message.get("role") == "assistant" and message.get("content", "").startswith("Final:") for message in messages):
-        errors.append("missing_final")
+    assistant_messages = [message for message in messages if message.get("role") == "assistant"]
+    if not assistant_messages or not isinstance(assistant_messages[-1].get("content"), str) or not assistant_messages[-1]["content"].strip():
+        errors.append("missing_final_assistant_content")
     for index, message in enumerate(messages):
+        if message.get("role") == "assistant" and message.get("tool_calls"):
+            if message.get("content") is not None:
+                errors.append(f"tool_call_content_not_null_{index}")
+            continue
         if not isinstance(message.get("content"), str) or not message["content"].strip():
             errors.append(f"empty_content_{index}")
     return errors
@@ -65,10 +70,26 @@ def validate_sft_messages(messages):
 
 def trajectory_to_messages(trajectory):
     messages = [{"role": "user", "content": trajectory["task"]}]
-    for step in trajectory["steps"]:
-        messages.append({"role": "assistant", "content": json.dumps(step["assistant"], ensure_ascii=False)})
-        messages.append({"role": "tool", "content": json.dumps(step["tool"], ensure_ascii=False)})
-    messages.append({"role": "assistant", "content": f"Final: {trajectory['final']}"})
+    for index, step in enumerate(trajectory["steps"]):
+        tool_call_id = f"call_{index + 1}"
+        messages.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": tool_call_id,
+                        "type": "function",
+                        "function": {
+                            "name": step["assistant"]["action"],
+                            "arguments": json.dumps(step["assistant"].get("arguments", {}), ensure_ascii=False),
+                        },
+                    }
+                ],
+            }
+        )
+        messages.append({"role": "tool", "tool_call_id": tool_call_id, "content": json.dumps(step["tool"], ensure_ascii=False)})
+    messages.append({"role": "assistant", "content": trajectory["final"]})
     return messages
 
 
@@ -93,12 +114,7 @@ def build_sft_records(trajectories):
 
 
 def render_trajectory(trajectory):
-    parts = []
-    for step in trajectory["steps"]:
-        parts.append(f"Action: {json.dumps(step['assistant'], ensure_ascii=False)}")
-        parts.append(f"Result: {json.dumps(step['tool'], ensure_ascii=False)}")
-    parts.append(f"Final: {trajectory['final']}")
-    return "\n".join(parts)
+    return trajectory_to_messages(trajectory)[1:]
 
 
 def build_dpo_records(trajectories):

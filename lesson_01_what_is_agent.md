@@ -81,18 +81,44 @@ Agent 训练更难，因为正确性常常取决于整条轨迹：
 
 拿一个真实任务，手写一条 agent trajectory：
 
-```text
-任务：查某个 Python 包安装失败的原因。
-
-Observation: 用户给出错误日志。
-Thought: 需要先识别包名和错误类型。
-Action: search_web(query="包名 错误关键字")
-Result: ...
-Thought: 搜索结果显示和 Python 版本有关，需要查官方 issue。
-Action: open_url(url="...")
-Result: ...
-Final: ...
+```json
+{
+  "task": "查某个 Python 包安装失败的原因。",
+  "messages": [
+    {"role": "user", "content": "用户给出错误日志。"},
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "search_web",
+            "arguments": "{\"query\":\"包名 错误关键字\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_1", "content": "搜索结果..."},
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "open_url",
+            "arguments": "{\"url\":\"...\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_2", "content": "官方 issue 内容..."},
+    {"role": "assistant", "content": "安装失败和 Python 版本不兼容有关，建议..."}
+  ]
+}
 ```
 
 重点不是写得像模型内部思考，而是把“看到了什么、做了什么、为什么继续”分清楚。
-

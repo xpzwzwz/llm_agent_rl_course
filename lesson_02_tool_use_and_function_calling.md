@@ -24,10 +24,18 @@
 
 ```json
 {
-  "tool": "search_web",
-  "arguments": {
-    "query": "WebArena benchmark LLM agents success rate"
-  }
+  "role": "assistant",
+  "content": null,
+  "tool_calls": [
+    {
+      "id": "call_1",
+      "type": "function",
+      "function": {
+        "name": "search_web",
+        "arguments": "{\"query\":\"WebArena benchmark LLM agents success rate\"}"
+      }
+    }
+  ]
 }
 ```
 
@@ -102,11 +110,12 @@ search_web -> open_url -> parse_table -> calculate -> final
 
 训练数据里应该保留一部分失败和恢复样本。例如：
 
-```text
-Action: open_url(...)
-Result: 404 Not Found
-Thought: 链接失效，需要回到搜索结果找官方页面。
-Action: search_web(...)
+```json
+[
+  {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "open_url", "arguments": "{\"url\":\"...\"}"}}]},
+  {"role": "tool", "tool_call_id": "call_1", "content": "404 Not Found"},
+  {"role": "assistant", "content": null, "tool_calls": [{"id": "call_2", "type": "function", "function": {"name": "search_web", "arguments": "{\"query\":\"官方页面\"}"}}]}
+]
 ```
 
 ## 5. 工具 Schema 设计原则
@@ -120,4 +129,3 @@ Action: search_web(...)
 - 对危险工具加权限边界，例如文件写入、删除、付款、发邮件。
 
 工具越稳定，训练越容易。
-

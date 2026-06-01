@@ -12,11 +12,11 @@ SFT 不是让模型“变聪明”，而是让模型学会目标行为分布：
 
 对 agent 来说，合格输出包括：
 
-- 正确 action 格式。
+- 正确结构化 tool call。
 - 正确工具选择。
 - 根据 observation 继续。
 - 必要时验证。
-- 合理 final。
+- 合理最终回答。
 
 ## 2. 样本格式
 
@@ -27,18 +27,44 @@ SFT 不是让模型“变聪明”，而是让模型学会目标行为分布：
   "messages": [
     {"role": "system", "content": "你是代码 agent，可用工具 read_file, run_tests。"},
     {"role": "user", "content": "修复测试失败。"},
-    {"role": "assistant", "content": "{\"action\":\"run_tests\",\"arguments\":{\"command\":\"pytest -q\"}}"},
-    {"role": "tool", "content": "FAILED test_empty_input"},
-    {"role": "assistant", "content": "{\"action\":\"read_file\",\"arguments\":{\"path\":\"src/parser.py\"}}"},
-    {"role": "tool", "content": "def parse(text): ..."},
-    {"role": "assistant", "content": "Final: 已修复并通过测试。"}
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "run_tests",
+            "arguments": "{\"command\":\"pytest -q\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_1", "content": "FAILED test_empty_input"},
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\":\"src/parser.py\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_2", "content": "def parse(text): ..."},
+    {"role": "assistant", "content": "已修复并通过测试。"}
   ]
 }
 ```
 
 关键：
 
-- `assistant` 是模型要学的。
+- assistant 的 tool call 和最终回答是模型要学的。
 - `tool` 是环境返回，不应该让模型学习生成。
 - `system` 要稳定，不要每条随机变化。
 
@@ -50,7 +76,7 @@ SFT 不是让模型“变聪明”，而是让模型学会目标行为分布：
 system: no loss
 user: no loss
 tool: no loss
-assistant action/final: loss
+assistant tool_calls/final content: loss
 ```
 
 抽查方法：
@@ -178,4 +204,3 @@ secret_redaction_count
 - 每 1000 条至少人工看 20 条。
 - 每种任务类型至少看 10 条。
 - 高 token 样本单独抽查。
-

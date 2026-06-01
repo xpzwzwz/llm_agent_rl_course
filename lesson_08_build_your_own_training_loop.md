@@ -63,7 +63,37 @@ SFT 样本可以这样转换：
 {
   "messages": [
     {"role": "user", "content": "修复 parser 空输入 bug。"},
-    {"role": "assistant", "content": "Action: read_file(...)\nResult: ...\nAction: edit_file(...)\nResult: ...\nFinal: 测试通过。"}
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\":\"src/parser.py\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_1", "content": "文件内容..."},
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "run_tests",
+            "arguments": "{\"command\":\"pytest -q\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_2", "content": "passed"},
+    {"role": "assistant", "content": "测试通过。"}
   ]
 }
 ```
@@ -73,12 +103,18 @@ DPO 样本可以这样转换：
 ```json
 {
   "prompt": "修复 parser 空输入 bug。",
-  "chosen": "Action: read_file...\nAction: edit_file...\nAction: run_tests...\nFinal: passed",
-  "rejected": "Final: 可能是空输入没有处理，请检查 parser.py。"
+  "chosen": [
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "read_file", "arguments": "{\"path\":\"src/parser.py\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "content": "文件内容..."},
+    {"role": "assistant", "content": "passed"}
+  ],
+  "rejected": [
+    {"role": "assistant", "content": "可能是空输入没有处理，请检查 parser.py。"}
+  ]
 }
 ```
 
-如果工具调用框架支持原生 tool messages，优先保留结构化格式。
+如果运行时日志来自 JSON action 或其他框架，生成训练数据前先 normalize 成结构化 tool messages。
 
 ## 5. 训练后评估
 
@@ -112,4 +148,3 @@ sft_dpo            0.43           7.4         0.05                  $9
 - 建立长周期回归评估。
 
 真正的 agent 能力来自持续闭环，而不是一次训练。
-

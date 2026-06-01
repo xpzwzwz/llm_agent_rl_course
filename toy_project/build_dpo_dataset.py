@@ -10,12 +10,34 @@ OUT = ROOT / "data" / "dpo.jsonl"
 
 
 def render_trajectory(trajectory):
-    parts = []
-    for step in trajectory["steps"]:
-        action = json.dumps(step["assistant"], ensure_ascii=False)
-        parts.append(f"Action: {action}")
-    parts.append(f"Final: {trajectory['final']}")
-    return "\n".join(parts)
+    messages = []
+    for index, step in enumerate(trajectory["steps"]):
+        tool_call_id = f"call_{index + 1}"
+        messages.append(
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": tool_call_id,
+                        "type": "function",
+                        "function": {
+                            "name": step["assistant"]["action"],
+                            "arguments": json.dumps(step["assistant"].get("arguments", {}), ensure_ascii=False),
+                        },
+                    }
+                ],
+            }
+        )
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": json.dumps(step["tool"], ensure_ascii=False),
+            }
+        )
+    messages.append({"role": "assistant", "content": trajectory["final"]})
+    return messages
 
 
 def build_pairs(trajectories):
@@ -50,4 +72,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

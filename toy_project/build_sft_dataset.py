@@ -14,20 +14,32 @@ def load_trajectories(path=RAW):
 
 def trajectory_to_sft(trajectory):
     messages = [{"role": "user", "content": trajectory["task"]}]
-    for step in trajectory["steps"]:
+    for index, step in enumerate(trajectory["steps"]):
+        tool_call_id = f"call_{index + 1}"
         messages.append(
             {
                 "role": "assistant",
-                "content": json.dumps(step["assistant"], ensure_ascii=False),
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": tool_call_id,
+                        "type": "function",
+                        "function": {
+                            "name": step["assistant"]["action"],
+                            "arguments": json.dumps(step["assistant"].get("arguments", {}), ensure_ascii=False),
+                        },
+                    }
+                ],
             }
         )
         messages.append(
             {
                 "role": "tool",
+                "tool_call_id": tool_call_id,
                 "content": json.dumps(step["tool"], ensure_ascii=False),
             }
         )
-    messages.append({"role": "assistant", "content": f"Final: {trajectory['final']}"})
+    messages.append({"role": "assistant", "content": trajectory["final"]})
     return {"messages": messages}
 
 
@@ -45,4 +57,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

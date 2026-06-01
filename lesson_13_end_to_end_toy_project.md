@@ -15,7 +15,6 @@ Agent 可用工具：
 - `list_files(path)`
 - `read_file(path)`
 - `search_text(query)`
-- `final(answer)`
 
 任务示例：
 
@@ -115,11 +114,11 @@ num_steps <= 8
 {
   "messages": [
     {"role":"user","content":"找到 GRPO 适合什么任务。"},
-    {"role":"assistant","content":"{\"action\":\"search_text\",\"arguments\":{\"query\":\"GRPO\"}}"},
-    {"role":"tool","content":"[{\"path\":\"lesson_06.md\",\"line\":237,\"text\":\"GRPO...\"}]"},
-    {"role":"assistant","content":"{\"action\":\"read_file\",\"arguments\":{\"path\":\"lesson_06.md\"}}"},
-    {"role":"tool","content":"..."},
-    {"role":"assistant","content":"Final: GRPO 适合有自动 verifier 的可验证任务..."}
+    {"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"search_text","arguments":"{\"query\":\"GRPO\"}"}}]},
+    {"role":"tool","tool_call_id":"call_1","content":"[{\"path\":\"lesson_06.md\",\"line\":237,\"text\":\"GRPO...\"}]"},
+    {"role":"assistant","content":null,"tool_calls":[{"id":"call_2","type":"function","function":{"name":"read_file","arguments":"{\"path\":\"lesson_06.md\"}"}}]},
+    {"role":"tool","tool_call_id":"call_2","content":"..."},
+    {"role":"assistant","content":"GRPO 适合有自动 verifier 的可验证任务..."}
   ]
 }
 ```
@@ -138,8 +137,14 @@ num_steps <= 8
 ```json
 {
   "prompt": "找到 GRPO 适合什么任务。",
-  "chosen": "search_text -> read_file -> Final: GRPO 适合可验证任务...",
-  "rejected": "Final: GRPO 是一种强化学习算法。"
+  "chosen": [
+    {"role":"assistant","content":null,"tool_calls":[{"id":"call_1","type":"function","function":{"name":"search_text","arguments":"{\"query\":\"GRPO\"}"}}]},
+    {"role":"tool","tool_call_id":"call_1","content":"GRPO 适合可验证任务..."},
+    {"role":"assistant","content":"GRPO 适合可验证任务..."}
+  ],
+  "rejected": [
+    {"role":"assistant","content":"GRPO 是一种强化学习算法。"}
+  ]
 }
 ```
 
@@ -187,4 +192,3 @@ examples:
 3. 加 100 到 500 条任务。
 4. 用 rejection sampling 扩 SFT/DPO。
 5. 用 GRPO 让模型在 verifier 上继续优化。
-

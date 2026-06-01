@@ -36,11 +36,37 @@ SFT -> DPO -> rejection sampling -> GRPO
   "messages": [
     {"role": "system", "content": "你是网页 agent，可用工具 search_web, open_url。"},
     {"role": "user", "content": "查找 WebArena 是什么。"},
-    {"role": "assistant", "content": "Action: search_web({\"query\":\"WebArena benchmark LLM agents\"})"},
-    {"role": "tool", "content": "搜索结果..."},
-    {"role": "assistant", "content": "Action: open_url({\"url\":\"https://webarena.dev/\"})"},
-    {"role": "tool", "content": "WebArena 项目页内容..."},
-    {"role": "assistant", "content": "Final: WebArena 是..."}
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "search_web",
+            "arguments": "{\"query\":\"WebArena benchmark LLM agents\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_1", "content": "搜索结果..."},
+    {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "open_url",
+            "arguments": "{\"url\":\"https://webarena.dev/\"}"
+          }
+        }
+      ]
+    },
+    {"role": "tool", "tool_call_id": "call_2", "content": "WebArena 项目页内容..."},
+    {"role": "assistant", "content": "WebArena 是..."}
   ]
 }
 ```
@@ -87,8 +113,16 @@ DPO 需要 preference pair：
 ```json
 {
   "prompt": "修复 parser 空输入导致的测试失败。",
-  "chosen": "Action: run_tests(...)\nResult: FAILED\nAction: read_file(...)\nAction: edit_file(...)\nAction: run_tests(...)\nResult: passed\nFinal: 已修复。",
-  "rejected": "Final: 可能是 parser.py 的问题，建议检查空输入。"
+  "chosen": [
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "run_tests", "arguments": "{\"command\":\"pytest -q\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "content": "FAILED"},
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_2", "type": "function", "function": {"name": "read_file", "arguments": "{\"path\":\"src/parser.py\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_2", "content": "文件内容..."},
+    {"role": "assistant", "content": "已修复。"}
+  ],
+  "rejected": [
+    {"role": "assistant", "content": "可能是 parser.py 的问题，建议检查空输入。"}
+  ]
 }
 ```
 
@@ -404,4 +438,3 @@ for task in tasks:
 - 用 rejection sampling 扩数据。
 - 如果 verifier 稳定，尝试 GRPO。
 - 分析 reward hacking 和失败类型。
-

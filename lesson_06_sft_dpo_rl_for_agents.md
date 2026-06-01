@@ -75,7 +75,7 @@ Agent SFT 的目标：
 - 输出合法工具调用。
 - 遵守 JSON/schema。
 - 根据 observation 继续行动。
-- 在 final 之前做必要验证。
+- 在最终回答之前做必要验证。
 - 学会失败恢复轨迹。
 
 一个 SFT 样本可以写成：
@@ -93,39 +93,83 @@ Agent SFT 的目标：
     },
     {
       "role": "assistant",
-      "content": "Action: run_tests({\"command\":\"pytest tests/test_parser.py -q\"})"
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_1",
+          "type": "function",
+          "function": {
+            "name": "run_tests",
+            "arguments": "{\"command\":\"pytest tests/test_parser.py -q\"}"
+          }
+        }
+      ]
     },
     {
       "role": "tool",
+      "tool_call_id": "call_1",
       "content": "FAILED test_empty_input: ValueError"
     },
     {
       "role": "assistant",
-      "content": "Action: read_file({\"path\":\"src/parser.py\"})"
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_2",
+          "type": "function",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\":\"src/parser.py\"}"
+          }
+        }
+      ]
     },
     {
       "role": "tool",
+      "tool_call_id": "call_2",
       "content": "def parse(text): return text.split(',')"
     },
     {
       "role": "assistant",
-      "content": "Action: edit_file({\"path\":\"src/parser.py\",\"patch\":\"if not text: return []\"})"
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_3",
+          "type": "function",
+          "function": {
+            "name": "edit_file",
+            "arguments": "{\"path\":\"src/parser.py\",\"patch\":\"if not text: return []\"}"
+          }
+        }
+      ]
     },
     {
       "role": "tool",
+      "tool_call_id": "call_3",
       "content": "edited"
     },
     {
       "role": "assistant",
-      "content": "Action: run_tests({\"command\":\"pytest tests/test_parser.py -q\"})"
+      "content": null,
+      "tool_calls": [
+        {
+          "id": "call_4",
+          "type": "function",
+          "function": {
+            "name": "run_tests",
+            "arguments": "{\"command\":\"pytest tests/test_parser.py -q\"}"
+          }
+        }
+      ]
     },
     {
       "role": "tool",
+      "tool_call_id": "call_4",
       "content": "4 passed"
     },
     {
       "role": "assistant",
-      "content": "Final: 已修复空输入处理，测试通过。"
+      "content": "已修复空输入处理，测试通过。"
     }
   ]
 }
@@ -134,7 +178,7 @@ Agent SFT 的目标：
 训练时要注意：
 
 - 只把高质量成功轨迹、或失败后成功恢复的轨迹放进 SFT。
-- 不要让模型学习工具返回值，loss 应该主要落在 assistant action/final 上。
+- 不要让模型学习工具返回值，loss 应该主要落在 assistant tool call 和最终回答上。
 - 保持工具名、参数名和返回格式稳定。
 - 长轨迹要截断或分段，否则模型学到很多噪声。
 - 混入一部分普通聊天/推理数据，避免 agent 化后通用能力下降。
@@ -163,8 +207,16 @@ Agent 里要比较的是整条轨迹：
 ```json
 {
   "prompt": "修复 parser 空输入导致的测试失败。",
-  "chosen": "Action: run_tests(...)\nResult: FAILED\nAction: read_file(...)\nAction: edit_file(...)\nAction: run_tests(...)\nResult: 4 passed\nFinal: 已修复，测试通过。",
-  "rejected": "Final: 可能是 parse 函数没有处理空输入，请检查 src/parser.py。"
+  "chosen": [
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "run_tests", "arguments": "{\"command\":\"pytest -q\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "content": "FAILED"},
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_2", "type": "function", "function": {"name": "read_file", "arguments": "{\"path\":\"src/parser.py\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_2", "content": "def parse(text): ..."},
+    {"role": "assistant", "content": "已修复，测试通过。"}
+  ],
+  "rejected": [
+    {"role": "assistant", "content": "可能是 parse 函数没有处理空输入，但我还没有验证。"}
+  ]
 }
 ```
 
@@ -371,4 +423,3 @@ rejection sampling 很实用：
 - 长任务是否更稳，而不是只提升短任务？
 
 如果这些问题答不上来，就不要宣称 agent 变强。
-

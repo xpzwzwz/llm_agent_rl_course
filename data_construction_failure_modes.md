@@ -43,9 +43,9 @@
 坏数据：
 
 ```text
-Action: search_web(...)
-Result: no useful result
-Final: 可能是因为版本问题。
+assistant tool call: search_web(...)
+tool result: no useful result
+assistant content: 可能是因为版本问题。
 ```
 
 如果这条轨迹没有最终验证成功，不应该直接放进 SFT。否则模型会学会“查不到就猜”。
@@ -105,7 +105,7 @@ search A -> search A -> search A -> open same URL -> open same URL
 ```text
 search_web({"query":"..."})
 {"tool":"search_web","args":{"q":"..."}}
-Action: Search[...]
+Search[...]
 ```
 
 模型会学得不稳定。
@@ -139,8 +139,8 @@ rejected score = 0.75
 
 ```json
 {
-  "chosen": "Final: 已完成。",
-  "rejected": "Final: 没完成。"
+  "chosen": [{"role": "assistant", "content": "已完成。"}],
+  "rejected": [{"role": "assistant", "content": "没完成。"}]
 }
 ```
 
@@ -149,7 +149,7 @@ rejected score = 0.75
 正确 pair 应包含：
 
 ```text
-Action -> Result -> Action -> Result -> Final
+assistant tool call -> tool result -> assistant tool call -> tool result -> assistant final answer
 ```
 
 ### 2.3 Rejected 太差

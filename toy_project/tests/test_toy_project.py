@@ -45,9 +45,12 @@ def test_trajectory_to_sft_preserves_tool_messages():
 
     assert sample["messages"][0]["role"] == "user"
     assert sample["messages"][1]["role"] == "assistant"
-    assert json.loads(sample["messages"][1]["content"])["action"] == "search_text"
+    assert sample["messages"][1]["content"] is None
+    assert sample["messages"][1]["tool_calls"][0]["function"]["name"] == "search_text"
+    assert json.loads(sample["messages"][1]["tool_calls"][0]["function"]["arguments"]) == {"query": "GRPO"}
     assert sample["messages"][2]["role"] == "tool"
-    assert sample["messages"][-1]["content"].startswith("Final:")
+    assert sample["messages"][2]["tool_call_id"] == sample["messages"][1]["tool_calls"][0]["id"]
+    assert sample["messages"][-1]["content"] == "GRPO 适合可验证任务。"
 
 
 def test_build_pairs_uses_highest_score_as_chosen():
@@ -67,5 +70,5 @@ def test_build_pairs_uses_highest_score_as_chosen():
     pairs = build_pairs(trajectories)
 
     assert len(pairs) == 1
-    assert "GRPO 适合可验证任务" in pairs[0]["chosen"]
-    assert pairs[0]["rejected"] == "Final: bad"
+    assert "GRPO 适合可验证任务" in pairs[0]["chosen"][-1]["content"]
+    assert pairs[0]["rejected"] == [{"role": "assistant", "content": "bad"}]
